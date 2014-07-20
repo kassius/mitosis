@@ -10,6 +10,7 @@
  * Embed Files (prefix +)
  * Built-in Commands / Functions (no prefix)
  * Embedded Modules Commands (prefix & or :)
+ * Internal options/flags (prefix - or --)
  *
  * PREFIXES ARE JUST AN IDEA. COULD NOT BE USED THIS BECAUSE ARE USED BY BASH
  *
@@ -95,6 +96,8 @@ class MitosisInternal
 		else if($this->where_open !== false && $this->where_close !== false && ($this->where_open < $this->where_close) )
 		{
 			// there is data
+			$this->is_empty = false;
+			
 			$this->open_tag_length = strlen($this->opening_string); // strpos starts from begin of opening tag
 			$this->close_tag_length = strlen($this->closing_string); // strpos starts from begin of opening tag
 			$this->real_data_start = $this->where_open + $this->open_tag_length;
@@ -128,16 +131,21 @@ class MitosisInternal
 {$cl_str_upper}
 EOT;
 
-			$close_tag_end = $this->where_close + $this->close_tag_length;
 			//$file = substr_replace($this->the_file, $data_full, $this->where_empty, $close_tag_end);
 			$file = substr_replace($this->the_file, $data_full, $begin, $end);
 			file_put_contents($this->_argv[0], $file);
+		}
+		else if($this->is_empty === false)
+		{
+			$close_tag_end = $this->where_close + $this->close_tag_length;
+			$file = substr_replace($this->the_file, $data_full, $this->where_empty, $close_tag_end);
 			echo <<<EOT
 WHERE_OPEN {$this->where_open}
 where_close {$this->where_close}
 close_tag_end {$close_tag_end}
 close_tag_length {$this->close_tag_length}
 EOT;
+			file_put_contents($this->_argv[0], $file);
 		}
 	}
 }
