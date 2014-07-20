@@ -51,7 +51,7 @@ class MitosisInternal
 	public $open_string, $close_string, $empty_string;
 	
 	public $where_open, $where_close, $where_empty;
-	public $open_tag_length, $close_tag_length, $real_data_start, $length;
+	public $open_tag_length, $close_tag_length, $empty_tag_length, $real_data_start, $length;
 
 	public $is_empty;
 
@@ -60,7 +60,7 @@ class MitosisInternal
 		$this->_argc = $argc;
 		$this->_argv = $argv;
 
-		$this->aux_line_end = "";
+		$this->aux_line_end = "\n";
 
 		$this->opening_string = "/* --- start data ---" . $this->aux_line_end;
 		$this->closing_string = "--- end data --- */" . $this->aux_line_end;
@@ -88,6 +88,7 @@ class MitosisInternal
 		{
 			// data is empty
 			$this->is_empty = true;
+			$this->empty_tag_length = strlen($this->empty_string);
 			
 			return 0;
 		}
@@ -100,7 +101,7 @@ class MitosisInternal
 			$this->length = $this->where_close - $this->real_data_start;
 			$this->the_data = substr($this->the_file, $this->real_data_start, $this->length);
 
-			return $data;
+			return $this->the_data;
 		}
 		else
 		{
@@ -114,16 +115,23 @@ class MitosisInternal
 	{
 		if($this->is_empty === true)
 		{
+			$begin = $this->where_empty;
+			$end = $this->empty_tag_length;
 			// $data = "Okay";
+			
+			$op_str_upper = strtoupper($this->opening_string);
+			$cl_str_upper = strtoupper($this->closing_string);
+			
 			$data_full = <<<EOT
-{$this->opening_string}
+{$op_str_upper}
 {$data}
-{$this->closing_string}
+{$cl_str_upper}
 EOT;
 
 			$close_tag_end = $this->where_close + $this->close_tag_length;
-			$file = substr_replace($this->the_file, $data_full, $this->where_open, $close_tag_end);
-			//file_put_contents($this->_argv[0], $file);
+			//$file = substr_replace($this->the_file, $data_full, $this->where_empty, $close_tag_end);
+			$file = substr_replace($this->the_file, $data_full, $begin, $end);
+			file_put_contents($this->_argv[0], $file);
 			echo <<<EOT
 WHERE_OPEN {$this->where_open}
 where_close {$this->where_close}
