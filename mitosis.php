@@ -22,13 +22,16 @@
 
 class MitosisCommands
 {
-	private $_argc, $_argv;
+	public $_argc, $_argv;
 
 	public $InternalCommands;
 
 	public function __construct($argc, $argv)
 	{
-		$this->InternalCommands = new MitosisInternal($argc, $argv);
+		$this->_argc = $argc;
+		$this->_argv = $argv;
+
+		$this->InternalCommands = new MitosisInternal($this->_argc, $this->_argv);
 	}
 
 	public function Help()
@@ -39,9 +42,9 @@ class MitosisCommands
 
 class MitosisInternal
 {	
-	private $_argc, $_argv;
+	public $_argc, $_argv;
 
-	private $aux_line_end;
+	public $aux_line_end;
 
 	public $the_file, $the_data;
 
@@ -54,7 +57,7 @@ class MitosisInternal
 		$this->_argc = $argc;
 		$this->_argv = $argv;
 
-		$this->aux_line_end = "\r\n";
+		$this->aux_line_end = "";
 
 		$this->opening_string = "/* --- start data ---" . $this->aux_line_end;
 		$this->closing_string = "--- end data --- */" . $this->aux_line_end;
@@ -62,6 +65,7 @@ class MitosisInternal
 	
 	
 		echo $this->the_data = $this->ms_read_data();
+		$this->ms_write_data("ok");
 	}
 
 	public function ms_echo($string)
@@ -106,13 +110,14 @@ class MitosisInternal
 	{
 		if($this->is_empty === true)
 		{
-			$data = "Okay";
+			// $data = "Okay";
 			$data_full = <<<EOT
 {$this->opening_string}
 {$data}
-{$this->closing_string>}
+{$this->closing_string}
 EOT;
 
+			file_puts_content($this->_argv[0], $data_full);
 		}
 	}
 }
