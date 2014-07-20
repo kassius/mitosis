@@ -49,6 +49,9 @@ class MitosisInternal
 	public $the_file, $the_data;
 
 	public $open_string, $close_string, $empty_string;
+	
+	public $where_open, $where_close, $where_empty;
+	public $open_tag_length, $real_data_start, $length;
 
 	public $is_empty;
 
@@ -77,24 +80,24 @@ class MitosisInternal
 	{
 		$this->the_file = file_get_contents($this->_argv[0]);
 
-		$where_open = strpos($this->the_file, strtoupper($this->opening_string));
-		$where_close = strrpos($this->the_file, strtoupper($this->closing_string));
-		$where_empty = strpos($this->the_file, strtoupper($this->empty_string));
+		$this->where_open = strpos($this->the_file, strtoupper($this->opening_string));
+		$this->where_close = strrpos($this->the_file, strtoupper($this->closing_string));
+		$this->where_empty = strpos($this->the_file, strtoupper($this->empty_string));
 
-		if($where_empty !== false && ( $where_open === false && $where_close === false ))
+		if($this->where_empty !== false && ( $this->where_open === false && $this->where_close === false ))
 		{
 			// data is empty
 			$this->is_empty = true;
 			
 			return 0;
 		}
-		else if($where_open !== false && $where_close !== false && ($where_open < $where_close) )
+		else if($this->where_open !== false && $this->where_close !== false && ($this->where_open < $this->where_close) )
 		{
 			// there is data
-			$open_tag_length = strlen($this->opening_string); // strpos starts from begin of opening tag
-			$real_data_start = $where_open + $open_tag_length;
-			$length = $where_close - $real_data_start;
-			$data = substr($this->the_file, $real_data_start, $length);
+			$this->open_tag_length = strlen($this->opening_string); // strpos starts from begin of opening tag
+			$this->real_data_start = $this->where_open + $this->open_tag_length;
+			$this->length = $this->where_close - $this->real_data_start;
+			$this->the_data = substr($this->the_file, $this->real_data_start, $this->length);
 
 			return $data;
 		}
