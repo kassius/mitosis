@@ -5,11 +5,11 @@
  * TODO:
  *
  * Check for requirements
- * Aliases (shell commands) (prefix @)
- * Variables (prefix $)
+ * Aliases (shell commands) (prefix %)
+ * Variables (prefix $ or @) 
  * Embed Files (prefix +)
  * Built-in Commands / Functions (no prefix)
- * Embedded Modules Commands (prefix &)
+ * Embedded Modules Commands (prefix & or :)
  *
  * PREFIXES ARE JUST AN IDEA. COULD NOT BE USED THIS BECAUSE ARE USED BY BASH
  *
@@ -19,13 +19,16 @@
  *   * List
  *
  * */
+
 class MitosisCommands
 {
+	private $_argc, $_argv;
+
 	public $InternalCommands;
 
-	public function __construct()
+	public function __construct($argc, $argv)
 	{
-		$this->InternalCommands = new MitosisInternal();
+		$this->InternalCommands = new MitosisInternal($argc, $argv);
 	}
 
 	public function Help()
@@ -36,21 +39,29 @@ class MitosisCommands
 
 class MitosisInternal
 {	
+	private $_argc, $_argv;
+
 	private $aux_line_end;
 
-	public $the_data;
+	public $the_file, $the_data;
 
 	public $open_string, $close_string, $empty_string;
 
+	public $is_empty;
+
 	public function __construct($argc, $argv)
 	{
-		$this->opening_string = "--- start data ---";
-		$this->closing_string = "--- end data ---";
-		$this->empty_string = "--- data ---";
+		$this->_argc = $argc;
+		$this->_argv = $argv;
+
+		$this->aux_line_end = "\r\n";
+
+		$this->opening_string = "/* --- start data ---" . $this->aux_line_end;
+		$this->closing_string = "--- end data --- */" . $this->aux_line_end;
+		$this->empty_string = "/*--- data --- */" . $this->aux_line_end;
 	
-		$this->aux_line_end = "\n\r";
 	
-		$this->the_data = $this->ms_read_data($argc, $argv);
+		echo $this->the_data = $this->ms_read_data();
 	}
 
 	public function ms_echo($string)
@@ -58,24 +69,52 @@ class MitosisInternal
 		echo "{$string}{$this->aux_line_end}";
 	}
 
-	public function ms_read_data($argc, $argv)
+	public function ms_read_data()
 	{
-		$the_file = file_get_contents($argv[0]);
+		$this->the_file = file_get_contents($this->_argv[0]);
 
-		$where_open = strpos($the_file, strtoupper($this->opening_string));
-		$where_close = strpos($the_file, strtoupper($this->closing_string));
-		$where_empty = strpos($the_file, strtoupper($this->empty_string));
+		$where_open = strpos($this->the_file, strtoupper($this->opening_string));
+		$where_close = strrpos($this->the_file, strtoupper($this->closing_string));
+		$where_empty = strpos($this->the_file, strtoupper($this->empty_string));
 
 		if($where_empty !== false && ( $where_open === false && $where_close === false ))
 		{
 			// data is empty
+			$this->is_empty = true;
+			
+			return 0;
 		}
-		else if($where_open !== false && $where_close !== false && () )
+		else if($where_open !== false && $where_close !== false && ($where_open < $where_close) )
+		{
+			// there is data
+			$open_tag_length = strlen($this->opening_string); // strpos starts from begin of opening tag
+			$real_data_start = $where_open + $open_tag_length;
+			$length = $where_close - $real_data_start;
+			$data = substr($this->the_file, $real_data_start, $length);
+
+			return $data;
+		}
 		else
+		{
+			// there is error
+			return -1;
+		}
 
 	}
 
-	public function ms_write();
+	public function ms_write_data($data)
+	{
+		if($this->is_empty === true)
+		{
+			$data = "Okay";
+			$data_full = <<<EOT
+{$this->opening_string}
+{$data}
+{$this->closing_string>}
+EOT;
+
+		}
+	}
 }
 
 class Mitosis
@@ -101,7 +140,7 @@ class Mitosis
 }
 
 /* --- DATA --- */
-	
+
 $OurMitosis = new Mitosis($argc, $argv);
 
 ?>
