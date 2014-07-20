@@ -51,7 +51,7 @@ class MitosisInternal
 	public $open_string, $close_string, $empty_string;
 	
 	public $where_open, $where_close, $where_empty;
-	public $open_tag_length, $real_data_start, $length;
+	public $open_tag_length, $close_tag_length, $real_data_start, $length;
 
 	public $is_empty;
 
@@ -95,6 +95,7 @@ class MitosisInternal
 		{
 			// there is data
 			$this->open_tag_length = strlen($this->opening_string); // strpos starts from begin of opening tag
+			$this->close_tag_length = strlen($this->closing_string); // strpos starts from begin of opening tag
 			$this->real_data_start = $this->where_open + $this->open_tag_length;
 			$this->length = $this->where_close - $this->real_data_start;
 			$this->the_data = substr($this->the_file, $this->real_data_start, $this->length);
@@ -120,7 +121,15 @@ class MitosisInternal
 {$this->closing_string}
 EOT;
 
-			file_puts_content($this->_argv[0], $data_full);
+			$close_tag_end = $this->where_close + $this->close_tag_length;
+			$file = substr_replace($this->the_file, $data_full, $this->where_open, $close_tag_end);
+			//file_put_contents($this->_argv[0], $file);
+			echo <<<EOT
+WHERE_OPEN {$this->where_open}
+where_close {$this->where_close}
+close_tag_end {$close_tag_end}
+close_tag_length {$this->close_tag_length}
+EOT;
 		}
 	}
 }
