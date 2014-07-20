@@ -61,7 +61,7 @@ class MitosisInternal
 
 		$this->opening_string = "/* --- start data ---" . $this->aux_line_end;
 		$this->closing_string = "--- end data --- */" . $this->aux_line_end;
-		$this->empty_string = "/*--- data --- */" . $this->aux_line_end;
+		$this->empty_string = "/* --- data --- */" . $this->aux_line_end;
 	
 	
 		echo $this->the_data = $this->ms_read_data();
