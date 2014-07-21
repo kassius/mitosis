@@ -11,6 +11,13 @@
  * Built-in Commands / Functions (no prefix)
  * Embedded Modules Commands (prefix & or :)
  * Internal options/flags (prefix - or --)
+ * 
+ * Maybe, it could be good to do directories, like
+ * @var1/directory/subdir
+ * +file/dir/subdir
+ *    ETC
+ * 
+ * Modular, loads only what is necessary
  *
  * PREFIXES ARE JUST AN IDEA. COULD NOT BE USED THIS BECAUSE ARE USED BY BASH
  *
@@ -56,7 +63,7 @@ class MitosisCommands
 				if (isset($this->IC->content_array['variables']["$var"]))
 				{
 					$value = $this->IC->content_array['variables']["$var"];
-					$this->IC->Echo("{$var}: '{$value}'");
+					$this->IC->ms_echo("{$var}: '{$value}'");
 				}
 				else
 				{
@@ -70,6 +77,8 @@ class MitosisCommands
 				$value = implode(" ", $argv);
 				$this->IC->content_array['variables']["$var"] = $value;
 				$this->IC->ms_write_data($this->IC->content_array);
+				$this->IC->ms_read_data();
+				$this->IC->ms_echo("{$var} set to '{$this->IC->content_array['variables']["$var"]}'");
 			}
 			
 		}
@@ -115,7 +124,7 @@ class MitosisInternal
 	public $open_string, $close_string, $empty_string;
 	
 	public $where_open, $where_close, $where_empty;
-	public $open_tag_length, $close_tag_length, $empty_tag_length, $real_data_start, $length;
+	public $open_tag_length, $close_tag_length, $empty_tag_length, $real_data_start, $stripped_length, $full_length;
 
 	public $is_empty;
 	
@@ -172,9 +181,12 @@ class MitosisInternal
 			
 			$this->open_tag_length = strlen($this->opening_string); // strpos starts from begin of opening tag
 			$this->close_tag_length = strlen($this->closing_string); // strpos starts from begin of opening tag
+
 			$this->real_data_start = $this->where_open + $this->open_tag_length;
-			$this->length = $this->where_close - $this->real_data_start;
-			$this->the_data = substr($this->the_file, $this->real_data_start, $this->length);
+			$this->stripped_length = $this->where_close - $this->real_data_start;
+			$this->full_length = ($this->where_close + $this->close_tag_length) - $this->where_open;
+			
+			$this->the_data = substr($this->the_file, $this->real_data_start, $this->stripped_length);
 
 			$content_json = base64_decode($this->the_data);
 			$this->content_array = json_decode($content_json, true);
@@ -203,13 +215,11 @@ class MitosisInternal
 			{
 				$begin = $this->where_empty;
 				$end = $this->empty_tag_length;
-			
-				//file_put_contents($this->_argv[0], $file);
 			}
 			else if($this->is_empty === false) // file not cur empty
 			{
 				$begin = $this->where_open; // start data
-				$end = $this->where_close + $this->close_tag_length;
+				$end = $this->full_length;
 			}
 
 			$data_full = <<<EOT
