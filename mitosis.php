@@ -35,6 +35,34 @@ class MitosisCommands
 		$this->InternalCommands = new MitosisInternal($this->_argc, $this->_argv);
 	}
 
+	public function Execute()
+	{
+		if($this->_argv[1][0] /*regular expression matchin a-z,A-Z,underline*/)
+		{
+			// command
+			// add, list, remove
+		}
+		else if($this->_argv[1][0] === "@")
+		{
+			// variable
+		}
+		else if($this->_argv[1][0] === "%")
+		{
+			// alias
+		}
+		else if($this->_argv[1][0] === "+")
+		{
+			// file
+		}
+		else if($this->_argv[1][0] === "-")
+		{
+			// option / set flag
+		}
+		else if($this->_argv[1][0] === ":")
+		{
+			// module
+		}
+	}
 	public function Help()
 	{
 		$this->InternalCommands->ms_echo("Help");
@@ -55,6 +83,8 @@ class MitosisInternal
 	public $open_tag_length, $close_tag_length, $empty_tag_length, $real_data_start, $length;
 
 	public $is_empty;
+	
+	public $content_array;
 
 	public function __construct($argc, $argv)
 	{
@@ -163,11 +193,9 @@ class Mitosis
 		{
 			$MC->Help();
 		}
-		else if($argc == 2)
+		else
 		{
-		}
-		else if($argc > 2)
-		{
+			$return = $MC->Execute();
 		}
 	}
 }
