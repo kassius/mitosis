@@ -6,7 +6,7 @@
  *
  * Check for requirements
  * Aliases (shell commands) (prefix %)
- * Variables (prefix $ or @) 
+ * Variables / Registers (prefix $ or @) 
  * Embed Files (prefix +)
  * Built-in Commands / Functions (no prefix)
  * Embedded Modules Commands (prefix & or :)
@@ -25,47 +25,82 @@ class MitosisCommands
 {
 	public $_argc, $_argv;
 
-	public $InternalCommands;
+	public $IC;
 
 	public function __construct($argc, $argv)
 	{
 		$this->_argc = $argc;
 		$this->_argv = $argv;
 
-		$this->InternalCommands = new MitosisInternal($this->_argc, $this->_argv);
+		$this->IC = new MitosisInternal($this->_argc, $this->_argv);
 	}
 
 	public function Execute()
 	{
-		if($this->_argv[1][0] /*regular expression matchin a-z,A-Z,underline*/)
+		$argc = $this->_argc;
+		$argv = $this->_argv;
+		
+		if(preg_match("/^[a-zA-Z]{1,30}$/", $argv[1])) /*regular expression matchin a-z,A-Z,underline*/
 		{
 			// command
 			// add, list, remove
+			$this->IC->ms_echo("command: {$argv[1]}");
 		}
-		else if($this->_argv[1][0] === "@")
+		else if(preg_match("/^@[a-zA-Z]{1,30}$/", $argv[1]))
 		{
 			// variable
+			$var = $argv[1];
+			
+			if($argc === 2)
+			{
+				if (isset($this->IC->content_array['variables']["$var"]))
+				{
+					$value = $this->IC->content_array['variables']["$var"];
+					$this->IC->Echo("{$var}: '{$value}'");
+				}
+				else
+				{
+					$this->IC->ms_echo("variable '{$var}' is not set");
+				}
+			}
+			else
+			{
+				array_shift($argv);
+				array_shift($argv);
+				$value = implode(" ", $argv);
+				$this->IC->content_array['variables']["$var"] = $value;
+				$this->IC->ms_write_data($this->IC->content_array);
+			}
+			
 		}
-		else if($this->_argv[1][0] === "%")
+		else if(preg_match("/^%[a-zA-Z]{1,30}$/", $argv[1]))
 		{
 			// alias
+			$this->IC->ms_echo("alias: {$argv[1]}");
 		}
-		else if($this->_argv[1][0] === "+")
+		else if(preg_match("/^\+[a-zA-Z]{1,30}$/", $argv[1]))
 		{
 			// file
+			$this->IC->ms_echo("file: {$argv[1]}");
 		}
-		else if($this->_argv[1][0] === "-")
+		else if(preg_match("/^-[a-zA-Z]{1,30}$/", $argv[1]))
 		{
 			// option / set flag
+			$this->IC->ms_echo("option: {$argv[1]}");
 		}
-		else if($this->_argv[1][0] === ":")
+		else if(preg_match("/^:[a-zA-Z]{1,30}$/", $argv[1]))
 		{
 			// module
+			$this->IC->ms_echo("module: {$argv[1]}");
+		}
+		else
+		{
+			$this->IC->ms_echo("'{$argv[1]}': unknown action.");
 		}
 	}
 	public function Help()
 	{
-		$this->InternalCommands->ms_echo("Help");
+		$this->IC->ms_echo("Help");
 	}
 }
 
@@ -84,7 +119,7 @@ class MitosisInternal
 
 	public $is_empty;
 	
-	public $content_array;
+	public $content_array, $content_empty_model;
 
 	public function __construct($argc, $argv)
 	{
@@ -97,9 +132,16 @@ class MitosisInternal
 		$this->closing_string = "--- end data --- */" . $this->aux_line_end;
 		$this->empty_string = "/* --- data --- */" . $this->aux_line_end;
 	
-	
-		echo $this->the_data = $this->ms_read_data();
-		$this->ms_write_data("ok");
+		$this->content_empty_model = array(
+			'variables' => array(),
+			'aliases' => array(),
+			'files' => array(),
+			'options' => array(),
+			'modules' => array(),
+		);
+			
+		$this->the_data = $this->ms_read_data();
+		//$this->ms_write_data("ok");
 	}
 
 	public function ms_echo($string)
@@ -134,6 +176,9 @@ class MitosisInternal
 			$this->length = $this->where_close - $this->real_data_start;
 			$this->the_data = substr($this->the_file, $this->real_data_start, $this->length);
 
+			$content_json = base64_decode($this->the_data);
+			$this->content_array = json_decode($content_json, true);
+			
 			return $this->the_data;
 		}
 		else
@@ -144,38 +189,67 @@ class MitosisInternal
 
 	}
 
-	public function ms_write_data($data)
+	public function ms_write_data($content_array)
 	{
-		if($this->is_empty === true)
+		if(!$this->Is_Array_Empty($content_array)) // file will be written
 		{
-			$begin = $this->where_empty;
-			$end = $this->empty_tag_length;
-			// $data = "Okay";
-			
+			$content_json = json_encode($content_array);
+			$content_towrite = base64_encode($content_json);
+	
 			$op_str_upper = strtoupper($this->opening_string);
 			$cl_str_upper = strtoupper($this->closing_string);
+				
+			if($this->is_empty === true) // file cur empty
+			{
+				$begin = $this->where_empty;
+				$end = $this->empty_tag_length;
 			
+				//file_put_contents($this->_argv[0], $file);
+			}
+			else if($this->is_empty === false) // file not cur empty
+			{
+				$begin = $this->where_open; // start data
+				$end = $this->where_close + $this->close_tag_length;
+			}
+
 			$data_full = <<<EOT
 {$op_str_upper}
-{$data}
+{$content_towrite}
 {$cl_str_upper}
 EOT;
-
-			//$file = substr_replace($this->the_file, $data_full, $this->where_empty, $close_tag_end);
 			$file = substr_replace($this->the_file, $data_full, $begin, $end);
 			file_put_contents($this->_argv[0], $file);
 		}
-		else if($this->is_empty === false)
+		else
 		{
-			$close_tag_end = $this->where_close + $this->close_tag_length;
-			$file = substr_replace($this->the_file, $data_full, $this->where_empty, $close_tag_end);
-			echo <<<EOT
-WHERE_OPEN {$this->where_open}
-where_close {$this->where_close}
-close_tag_end {$close_tag_end}
-close_tag_length {$this->close_tag_length}
-EOT;
-			file_put_contents($this->_argv[0], $file);
+			if($this->is_empty === true) // file cur empty
+			{
+				// DO NOTHING: IS EMPTY AND WILL CONTINUE
+			}
+			else if($this->is_empty === false) // file not cur empty
+			{
+				$begin = $this->where_open; // start data
+				$end = $this->where_close + $this->close_tag_length;
+
+				$file = substr_replace($this->the_file, $empty_string, $begin, $end);
+				file_put_contents($this->_argv[0], $file);
+			}
+		}
+	}
+
+	public function Is_Array_Empty($content_array)
+	{
+		if( count($content_array['variables']) === 0 &&
+			count($content_array['aliase']) === 0 &&
+			count($content_array['files']) === 0 &&
+			count($content_array['options']) === 0 &&
+			count($content_array['modules']) === 0 )
+		{
+			return true;
+		}
+		else
+		{
+			return false;
 		}
 	}
 }
