@@ -246,7 +246,33 @@ EOT;
 		else if(preg_match("/^\+[a-zA-Z]{1,30}$/", $argv[1]))
 		{
 			// file
-			$this->IC->ms_echo("file: {$argv[1]}");
+			$file = $argv[1];
+			//$this->IC->ms_echo("file: {$argv[1]}");
+			
+			if($argc === 2)
+			{
+				if (isset($this->IC->content_array['files']["$file"]))
+				{
+					$value = $this->IC->content_array['files']["$file"];
+					$this->IC->ms_echo("{$file}: '{$value}'");
+				}
+				else
+				{
+					$this->IC->ms_echo("file '{$file}' not found");
+				}
+			}			
+			if($argc === 2)
+			{
+				if (isset($this->IC->content_array['variables']["$var"]))
+				{
+					$value = $this->IC->content_array['variables']["$var"];
+					$this->IC->ms_echo("{$var}: '{$value}'");
+				}
+				else
+				{
+					$this->IC->ms_echo("variable '{$var}' is not set");
+				}
+			}
 		}
 		else if(preg_match("/^-[a-zA-Z]{1,30}$/", $argv[1]))
 		{
