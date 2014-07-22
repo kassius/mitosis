@@ -1,6 +1,8 @@
 #!/usr/bin/php -q
 <?php
 
+error_reporting(E_ALL & ~E_NOTICE);
+
 /*
  * TODO:
  *
@@ -11,6 +13,7 @@
  * Built-in Commands / Functions (no prefix)
  * Embedded Modules Commands (prefix & or :)
  * Internal options/flags (prefix - or --)
+ *  ^ THESE ARE ALL ITEMS
  * 
  * Maybe, it could be good to do directories, like
  * @var1/directory/subdir
@@ -47,11 +50,135 @@ class MitosisCommands
 		$argc = $this->_argc;
 		$argv = $this->_argv;
 		
-		if(preg_match("/^[a-zA-Z]{1,30}$/", $argv[1])) /*regular expression matchin a-z,A-Z,underline*/
+		if(preg_match("/^[a-zA-Z]{1,30}$/", $argv[1])) /* regular expression matchin a-z,A-Z */
 		{
 			// command
 			// add, list, remove
-			$this->IC->ms_echo("command: {$argv[1]}");
+			
+			$command = $argv[1];
+			
+			if($this->IC->ms_command("ls", $command))
+			{
+					if (count($this->IC->content_array['variables'])>0)
+					{
+							$vars = implode(", ", array_keys($this->IC->content_array['variables']));
+							$vars_str = "Variables: {$vars}\r\n";
+					}
+					if (count($this->IC->content_array['aliases'])>0)
+					{
+							$aliases = implode(" ", array_keys($this->IC->content_array['aliases']));
+							$aliases_str = "Aliases: {$aliases}\r\n";
+					}
+					if (count($this->IC->content_array['files'])>0)
+					{
+							$files = implode(" ", array_keys($this->IC->content_array['files']));
+							$files_str = "Files: {$files}\r\n";
+					}
+					if (count($this->IC->content_array['options'])>0)
+					{
+							$options = implode(" ", array_keys($this->IC->content_array['options']));
+							$options_str = "Options: {$options}\r\n";
+					}
+					if (count($this->IC->content_array['modules'])>0)
+					{
+							$modules = implode(" ", array_keys($this->IC->content_array['modules']));
+							$modules_str = "Modules: {$modules}\r\n";
+					}
+					
+					echo <<<EOT
+{$vars_str}{$aliases_str}{$files_str}{$options_str}{$modules_str}
+EOT;
+			}
+			else if($this->IC->ms_command("rm", $command))
+			{
+				if($argc === 2)
+				{
+					// print arguments
+					$this->IC->ms_echo("rm: Remove items\r\nUsage: rm <item>");
+				}
+				else
+				{
+					if(preg_match("/^@[a-zA-Z]{1,30}$/", $argv[2]))
+					{
+						$var = $argv[2];
+						
+						if(isset($this->IC->content_array['variables']["$var"]))
+						{
+							unset($this->IC->content_array['variables']["$var"]);
+							$this->IC->ms_write_data($this->IC->content_array);
+						}
+						else
+						{
+							$this->IC->ms_echo("variable '{$var}' not found");
+						}
+					}
+					else if(preg_match("/^%[a-zA-Z]{1,30}$/", $argv[2]))
+					{
+						$alias = $argv[2];
+						
+						if(isset($this->IC->content_array['aliases']["$alias"]))
+						{
+							unset($this->IC->content_array['aliases']["$alias"]);
+							$this->IC->ms_write_data($this->IC->content_array);
+						}
+						else
+						{
+							$this->IC->ms_echo("alias '{$alias}' not found");
+						}
+					}
+					else if(preg_match("/^\+[a-zA-Z]{1,30}$/", $argv[2]))
+					{
+						// file
+						//$this->IC->ms_echo("file: {$argv[1]}");
+						$file = $argv[2];
+						
+						if(isset($this->IC->content_array['files']["$file"]))
+						{
+							unset($this->IC->content_array['files']["$file"]);
+							$this->IC->ms_write_data($this->IC->content_array);
+						}
+						else
+						{
+							$this->IC->ms_echo("file '{$file}' not found");
+						}
+					}
+					else if(preg_match("/^-[a-zA-Z]{1,30}$/", $argv[2]))
+					{
+						// USE UNSET
+						// file
+						//$this->IC->ms_echo("file: {$argv[1]}");
+						$option = $argv[2];
+						
+						if(isset($this->IC->content_array['options']["$option"]))
+						{
+							unset($this->IC->content_array['options']["$option"]);
+							$this->IC->ms_write_data($this->IC->content_array);
+						}
+						else
+						{
+							$this->IC->ms_echo("option '{$option}' not found");
+						}
+					}
+					else if(preg_match("/^:[a-zA-Z]{1,30}$/", $argv[2]))
+					{
+						$module = $argv[2];
+						
+						if(isset($this->IC->content_array['modules']["$module"]))
+						{
+							unset($this->IC->content_array['modules']["$module"]);
+							$this->IC->ms_write_data($this->IC->content_array);
+						}
+						else
+						{
+							$this->IC->ms_echo("module '{$module}' not found");
+						}
+					}
+				}
+			}
+			else
+			{
+				$this->IC->ms_echo("command '{$command}' not found");
+			}
 		}
 		else if(preg_match("/^@[a-zA-Z]{1,30}$/", $argv[1]))
 		{
@@ -72,10 +199,12 @@ class MitosisCommands
 			}
 			else
 			{
+				// attribute arvg[>1] to variable 
 				array_shift($argv);
 				array_shift($argv);
 				$value = implode(" ", $argv);
 				$this->IC->content_array['variables']["$var"] = $value;
+
 				$this->IC->ms_write_data($this->IC->content_array);
 				$this->IC->ms_read_data();
 				$this->IC->ms_echo("{$var} set to '{$this->IC->content_array['variables']["$var"]}'");
@@ -85,7 +214,34 @@ class MitosisCommands
 		else if(preg_match("/^%[a-zA-Z]{1,30}$/", $argv[1]))
 		{
 			// alias
-			$this->IC->ms_echo("alias: {$argv[1]}");
+			
+			$alias = $argv[1];
+			
+			if($argc === 2)
+			{
+				if (isset($this->IC->content_array['aliases']["$alias"]))
+				{
+					$value = $this->IC->content_array['aliases']["$alias"];
+					$this->IC->ms_echo("{$value}");
+					passthru($value);
+				}
+				else
+				{
+					$this->IC->ms_echo("alias '{$alias}' is not set");
+				}
+			}
+			else
+			{
+				// attribute arvg[>1] to variable 
+				array_shift($argv);
+				array_shift($argv);
+				$value = implode(" ", $argv);
+				$this->IC->content_array['aliases']["$alias"] = $value;
+
+				$this->IC->ms_write_data($this->IC->content_array);
+				$this->IC->ms_read_data();
+				$this->IC->ms_echo("{$alias} set to execute '{$this->IC->content_array['aliases']["$alias"]}'");
+			}
 		}
 		else if(preg_match("/^\+[a-zA-Z]{1,30}$/", $argv[1]))
 		{
@@ -239,18 +395,27 @@ EOT;
 			else if($this->is_empty === false) // file not cur empty
 			{
 				$begin = $this->where_open; // start data
-				$end = $this->where_close + $this->close_tag_length;
+				//$end = $this->where_close + $this->close_tag_length;
+				$end = $this->full_length;
 
-				$file = substr_replace($this->the_file, $empty_string, $begin, $end);
+				$data_full = strtoupper($this->empty_string);
+				
+				$file = substr_replace($this->the_file, $data_full, $begin, $end);
 				file_put_contents($this->_argv[0], $file);
 			}
 		}
+	}
+	
+	public function ms_command($command, $argument)
+	{
+		if( strcmp($command, $argument) === 0 ) return true;
+		else return false;
 	}
 
 	public function Is_Array_Empty($content_array)
 	{
 		if( count($content_array['variables']) === 0 &&
-			count($content_array['aliase']) === 0 &&
+			count($content_array['aliases']) === 0 &&
 			count($content_array['files']) === 0 &&
 			count($content_array['options']) === 0 &&
 			count($content_array['modules']) === 0 )
